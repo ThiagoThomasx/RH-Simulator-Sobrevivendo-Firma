@@ -8,6 +8,13 @@ import { timeSystem } from '../systems/TimeSystem';
 import { npcSystem } from '../systems/NPCSystem';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { dialogueSystem } from '../systems/DialogueSystem';
+import { missionSystem } from '../systems/MissionSystem';
+import { flagSystem } from '../systems/FlagSystem';
+
+import missionsData from '../data/missions.json';
+import testDialogue from '../data/dialogues/test-first-conversation.json';
+import type { MissionData } from '../types/mission.types';
+import type { DialogueFile } from '../types/dialogue.types';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -39,6 +46,10 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
     this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
 
+    // Load narrative data
+    missionSystem.loadMissions(missionsData as MissionData[]);
+    dialogueSystem.registerDialogue(testDialogue as DialogueFile);
+
     this._setupDebugKeys();
   }
 
@@ -50,18 +61,21 @@ export class GameScene extends Phaser.Scene {
     this._handleDebugInput();
   }
 
-  // --- Debug keys (remove before release) ---
+  // --- Debug keys ---
 
   private _setupDebugKeys(): void {
     const kb = this.input.keyboard!;
     this.debugKeys = {
-      one: kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
-      two: kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
+      one:   kb.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
+      two:   kb.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
       three: kb.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
-      four: kb.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
-      five: kb.addKey(Phaser.Input.Keyboard.KeyCodes.FIVE),
-      six: kb.addKey(Phaser.Input.Keyboard.KeyCodes.SIX),
+      four:  kb.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
+      five:  kb.addKey(Phaser.Input.Keyboard.KeyCodes.FIVE),
+      six:   kb.addKey(Phaser.Input.Keyboard.KeyCodes.SIX),
       seven: kb.addKey(Phaser.Input.Keyboard.KeyCodes.SEVEN),
+      m:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.M),
+      f:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.F),
+      o:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.O),
     };
   }
 
@@ -74,6 +88,18 @@ export class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(k.five))  statusSystem.addMoney(30);
     if (Phaser.Input.Keyboard.JustDown(k.six))   timeSystem.consumeMinutes(30);
     if (Phaser.Input.Keyboard.JustDown(k.seven)) timeSystem.consumeMinutes(180);
+
+    if (Phaser.Input.Keyboard.JustDown(k.m)) {
+      missionSystem.startMission('test_first_conversation');
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(k.f)) {
+      console.log('[DEBUG] Flags:', flagSystem.getSnapshot());
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(k.o)) {
+      console.log('[DEBUG] Missions:', JSON.stringify(missionSystem.getSnapshot(), null, 2));
+    }
   }
 }
 

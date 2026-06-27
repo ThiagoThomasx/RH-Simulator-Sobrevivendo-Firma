@@ -1,0 +1,23 @@
+[
+  {
+    "id": "test_first_conversation",
+    "title": "Primeira Conversa no RH",
+    "description": "Fale com a Rafa e escolha como responder para validar o sistema narrativo.",
+    "status": "available",
+    "objectives": [
+      {
+        "id": "talk_to_rafa",
+        "description": "Fale com a Rafa no RH",
+        "type": "talk_to_npc",
+        "targetId": "rafa",
+        "completed": false
+      },
+      {
+        "id": "choose_response",
+        "description": "Escolha uma resposta no diálogo",
+        "type": "choose_dialogue",
+        "completed": false
+      }
+    ]
+  }
+]

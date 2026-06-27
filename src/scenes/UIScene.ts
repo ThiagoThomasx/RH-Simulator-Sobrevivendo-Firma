@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_WIDTH } from '../config/game.config';
 import { statusSystem } from '../systems/StatusSystem';
 import { timeSystem } from '../systems/TimeSystem';
+import { missionSystem } from '../systems/MissionSystem';
 import { EventBus } from '../systems/EventBus';
 import type { StatusSnapshot } from '../types';
 
@@ -23,6 +24,7 @@ const C_STRESS_HI = 0xff2200;
 const C_ALERT_BG  = 0x220000;
 
 const ALERT_DURATION = 3500;
+const MISSION_ALERT_DURATION = 4000;
 
 export class UIScene extends Phaser.Scene {
   // HUD background / chrome
@@ -43,6 +45,8 @@ export class UIScene extends Phaser.Scene {
   private diaText!: Phaser.GameObjects.Text;
   private horaText!: Phaser.GameObjects.Text;
   private turnoText!: Phaser.GameObjects.Text;
+  private missionTitleText!: Phaser.GameObjects.Text;
+  private missionObjText!: Phaser.GameObjects.Text;
 
   // Alert
   private alertBg!: Phaser.GameObjects.Rectangle;
@@ -82,7 +86,6 @@ export class UIScene extends Phaser.Scene {
   private _createBars(): void {
     const prodX = PAD;
 
-    // produtividade
     this.add.text(prodX, 6, 'PROD', { fontSize: '9px', color: '#667799' });
     this.prodBarBg = this.add.rectangle(prodX, BAR_TOP, BAR_W, BAR_H, 0x223322);
     this.prodBarBg.setOrigin(0, 0);
@@ -92,7 +95,6 @@ export class UIScene extends Phaser.Scene {
       fontSize: '9px', color: '#aaccaa',
     });
 
-    // estresse
     const stressX = prodX + BAR_W + 36;
     this.add.text(stressX, 6, 'STRESS', { fontSize: '9px', color: '#996677' });
     this.stressBarBg = this.add.rectangle(stressX, BAR_TOP, BAR_W, BAR_H, 0x332222);
@@ -107,22 +109,24 @@ export class UIScene extends Phaser.Scene {
   // ------------------------------------------------------------------ texts
 
   private _createTexts(): void {
-    const style9  = { fontSize: '10px', color: '#aabbdd' };
     const styleMoney = { fontSize: '10px', color: '#eecc44' };
 
-    // Dinheiro
     const moneyX = 260;
     this.add.text(moneyX, 6, 'R$', { fontSize: '9px', color: '#887744' });
     this.moneyText = this.add.text(moneyX + 16, 5, '0,00', styleMoney);
 
-    // Missão
+    // Mission tracker
     const missaoX = 360;
-    this.add.text(missaoX, 6, 'MISSÃO', { fontSize: '9px', color: '#667799' });
-    this.add.text(missaoX, 18, 'Sem missão ativa', {
+    this.add.text(missaoX, 4, 'MISSÃO', { fontSize: '9px', color: '#667799' });
+    this.missionTitleText = this.add.text(missaoX, 16, 'Sem missão ativa', {
       fontSize: '9px', color: '#8899bb',
+    });
+    this.missionObjText = this.add.text(missaoX, 28, '', {
+      fontSize: '8px', color: '#667788',
     });
 
     // Dia + hora + turno (direita)
+    const style9 = { fontSize: '10px', color: '#aabbdd' };
     this.diaText  = this.add.text(GAME_WIDTH - 200, 5, 'Segunda', style9);
     this.horaText = this.add.text(GAME_WIDTH - 120, 5, '09:00', {
       fontSize: '13px', color: '#ccddf0',
@@ -131,8 +135,8 @@ export class UIScene extends Phaser.Scene {
       fontSize: '9px', color: '#667799',
     });
 
-    // Second row labels
-    this.add.text(PAD, ROW2, '1:-prod  2:+prod  3:+stress  4:-stress  5:+money  6:+30min  7:+3h', {
+    // Debug key hints
+    this.add.text(PAD, ROW2, '1:-prod  2:+prod  3:+stress  4:-stress  5:+money  6:+30min  7:+3h  M:missão  F:flags  O:objetivos', {
       fontSize: '8px', color: '#334455',
     });
   }
@@ -178,7 +182,7 @@ export class UIScene extends Phaser.Scene {
     this.alertText.setDepth(21);
   }
 
-  private _showAlert(message: string): void {
+  private _showAlert(message: string, color = '#ff4444', duration = ALERT_DURATION): void {
     if (this.alertTimer) {
       this.alertTimer.remove();
       this.alertTimer = undefined;
@@ -188,11 +192,11 @@ export class UIScene extends Phaser.Scene {
       this.alertTween = undefined;
     }
 
-    this.alertText.setText(message);
+    this.alertText.setText(message).setColor(color);
     this.alertBg.setAlpha(0.85);
     this.alertText.setAlpha(1);
 
-    this.alertTimer = this.time.delayedCall(ALERT_DURATION, () => {
+    this.alertTimer = this.time.delayedCall(duration, () => {
       this.alertTween = this.tweens.add({
         targets: [this.alertBg, this.alertText],
         alpha: 0,
@@ -207,6 +211,25 @@ export class UIScene extends Phaser.Scene {
     EventBus.on<StatusSnapshot>('status:changed', () => this._refreshStatus());
     EventBus.on('time:turno_mudou', () => this._refreshTime());
     EventBus.on('time:dia_acabou', () => this._refreshTime());
+
+    EventBus.on<{ missionId: string; title: string }>('mission:started', ({ title }) => {
+      this._refreshMission();
+      this._showAlert(`Missão iniciada: ${title}`, '#44aaff', MISSION_ALERT_DURATION);
+    });
+
+    EventBus.on('mission:objective_completed', () => {
+      this._refreshMission();
+    });
+
+    EventBus.on<{ missionId: string; title: string }>('mission:completed', ({ title }) => {
+      this._refreshMission();
+      this._showAlert(`✓ Missão concluída: ${title}`, '#44ff88', MISSION_ALERT_DURATION);
+    });
+
+    EventBus.on('mission:failed', () => {
+      this._refreshMission();
+      this._showAlert('Missão falhou.', '#ff4444', MISSION_ALERT_DURATION);
+    });
   }
 
   // ---------------------------------------------------------------- refresh
@@ -214,12 +237,12 @@ export class UIScene extends Phaser.Scene {
   private _refreshAll(): void {
     this._refreshStatus();
     this._refreshTime();
+    this._refreshMission();
   }
 
   private _refreshStatus(): void {
     const snap = statusSystem.getStatusSnapshot();
 
-    // Bars
     const prodRatio = snap.produtividade / 100;
     this.prodBar.width = Math.max(0, BAR_W * prodRatio);
     this.prodBar.setFillStyle(snap.produtividade <= 10 ? C_PROD_LOW : C_PROD_FULL);
@@ -230,16 +253,13 @@ export class UIScene extends Phaser.Scene {
     this.stressBar.setFillStyle(snap.estresse >= 80 ? C_STRESS_HI : C_STRESS);
     this.stressLabel.setText(String(snap.estresse));
 
-    // Money
     this.moneyText.setText(snap.dinheiro.toFixed(2).replace('.', ','));
 
-    // Critical state
     const critical = statusSystem.checkCriticalState();
     if (critical.flag !== 'ok') {
       this._showAlert(critical.message);
     }
 
-    // Stress overlay
     if (snap.estresse >= 80) {
       this._startStressPulse();
     } else {
@@ -254,8 +274,26 @@ export class UIScene extends Phaser.Scene {
     this.turnoText.setText(snap.turno);
   }
 
+  private _refreshMission(): void {
+    const active = missionSystem.getActiveMission();
+    if (!active) {
+      this.missionTitleText.setText('Sem missão ativa');
+      this.missionObjText.setText('');
+      return;
+    }
+
+    const progress = missionSystem.getMissionProgress(active.id);
+    if (!progress) return;
+
+    this.missionTitleText.setText(active.title);
+    if (progress.currentObjective) {
+      this.missionObjText.setText(`▶ ${progress.currentObjective.description}`);
+    } else {
+      this.missionObjText.setText('');
+    }
+  }
+
   update(): void {
-    // Tempo é lido via polling leve (snapshot barato, sem event spam)
     this._refreshTime();
   }
 }

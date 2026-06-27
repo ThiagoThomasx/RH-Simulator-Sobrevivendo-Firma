@@ -1,0 +1,60 @@
+{
+  "id": "test_first_conversation_dialogue",
+  "missionId": "test_first_conversation",
+  "characterId": "rafa",
+  "startNodeId": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "speakerId": "rafa",
+      "speakerName": "Rafa",
+      "text": "Tiago, preciso testar uma coisa gravíssima: você consegue me ouvir em JSON?",
+      "choices": [
+        {
+          "id": "choice_good",
+          "text": "Consigo. E aparentemente isso vai salvar nossa arquitetura.",
+          "nextNodeId": "good_response",
+          "effects": {
+            "productivityDelta": 5,
+            "friendshipDelta": { "targetId": "rafa", "value": 10 },
+            "setFlags": ["test_json_dialogue_success"],
+            "completeObjective": "talk_to_rafa"
+          }
+        },
+        {
+          "id": "choice_rude",
+          "text": "Não agora, Rafa. Estou ocupado sobrevivendo à firma.",
+          "nextNodeId": "rude_response",
+          "effects": {
+            "stressDelta": 5,
+            "friendshipDelta": { "targetId": "rafa", "value": -5 },
+            "setFlags": ["test_json_dialogue_rude"],
+            "completeObjective": "talk_to_rafa"
+          }
+        }
+      ]
+    },
+    {
+      "id": "good_response",
+      "speakerId": "rafa",
+      "speakerName": "Rafa",
+      "text": "Perfeito! Então oficialmente estamos menos dependentes de gambiarra.",
+      "effects": {
+        "completeObjective": "choose_response",
+        "completeMission": "test_first_conversation"
+      },
+      "endDialogue": true
+    },
+    {
+      "id": "rude_response",
+      "speakerId": "rafa",
+      "speakerName": "Rafa",
+      "text": "Nossa. Frio, corporativo e perigosamente eficiente.",
+      "effects": {
+        "completeObjective": "choose_response",
+        "completeMission": "test_first_conversation"
+      },
+      "endDialogue": true
+    }
+  ]
+}
