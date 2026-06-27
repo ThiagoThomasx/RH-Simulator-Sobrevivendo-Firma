@@ -10,9 +10,13 @@ import { InteractionSystem } from '../systems/InteractionSystem';
 import { dialogueSystem } from '../systems/DialogueSystem';
 import { missionSystem } from '../systems/MissionSystem';
 import { flagSystem } from '../systems/FlagSystem';
+import { zoneSystem } from '../systems/ZoneSystem';
+import { suspicionSystem } from '../systems/SuspicionSystem';
+import { patrolSystem } from '../systems/PatrolSystem';
 
 import missionsData from '../data/missions.json';
 import testDialogue from '../data/dialogues/test-first-conversation.json';
+import bossRhSuspicionDialogue from '../data/dialogues/boss-rh-suspicion.json';
 import type { MissionData } from '../types/mission.types';
 import type { DialogueFile } from '../types/dialogue.types';
 
@@ -49,6 +53,12 @@ export class GameScene extends Phaser.Scene {
     // Load narrative data
     missionSystem.loadMissions(missionsData as MissionData[]);
     dialogueSystem.registerDialogue(testDialogue as DialogueFile);
+    dialogueSystem.registerDialogue(bossRhSuspicionDialogue as DialogueFile);
+    dialogueSystem.bindContext(this, this.player);
+
+    // Init zone, suspicion and patrol systems
+    zoneSystem.init(this);
+    patrolSystem.init(this, this.player);
 
     this._setupDebugKeys();
   }
@@ -58,6 +68,8 @@ export class GameScene extends Phaser.Scene {
     timeSystem.update(delta);
     this.interactionSystem.update(this.player);
     dialogueSystem.update();
+    patrolSystem.update(delta);
+    suspicionSystem.update(delta);
     this._handleDebugInput();
   }
 
@@ -76,6 +88,11 @@ export class GameScene extends Phaser.Scene {
       m:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.M),
       f:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.F),
       o:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.O),
+      // Sprint 5 debug
+      c:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.C),
+      z:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.Z),
+      p:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.P),
+      k:     kb.addKey(Phaser.Input.Keyboard.KeyCodes.K),
     };
   }
 
@@ -92,13 +109,27 @@ export class GameScene extends Phaser.Scene {
     if (Phaser.Input.Keyboard.JustDown(k.m)) {
       missionSystem.startMission('test_first_conversation');
     }
-
     if (Phaser.Input.Keyboard.JustDown(k.f)) {
       console.log('[DEBUG] Flags:', flagSystem.getSnapshot());
     }
-
     if (Phaser.Input.Keyboard.JustDown(k.o)) {
       console.log('[DEBUG] Missions:', JSON.stringify(missionSystem.getSnapshot(), null, 2));
+    }
+
+    // Sprint 5 debug
+    if (Phaser.Input.Keyboard.JustDown(k.c)) {
+      patrolSystem.toggleConeDebug();
+    }
+    if (Phaser.Input.Keyboard.JustDown(k.z)) {
+      zoneSystem.toggleDebug();
+    }
+    if (Phaser.Input.Keyboard.JustDown(k.p)) {
+      // Teleport player near the boss (DP area – risky zone for testing)
+      const body = this.player.body;
+      body.reset(1400, 180);
+    }
+    if (Phaser.Input.Keyboard.JustDown(k.k)) {
+      suspicionSystem.addSuspicion(25);
     }
   }
 }

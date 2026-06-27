@@ -38,4 +38,13 @@ export class Player {
   get isMovementLocked(): boolean {
     return this._movementLocked;
   }
+
+  isMoving(): boolean {
+    const body = this.body;
+    return Math.abs(body.velocity.x) > 4 || Math.abs(body.velocity.y) > 4;
+  }
+
+  getVelocity(): { x: number; y: number } {
+    return { x: this.body.velocity.x, y: this.body.velocity.y };
+  }
 }

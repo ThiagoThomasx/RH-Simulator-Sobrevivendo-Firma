@@ -6,6 +6,11 @@ import { missionSystem } from '../systems/MissionSystem';
 import { EventBus } from '../systems/EventBus';
 import type { StatusSnapshot } from '../types';
 
+const C_SUSPICION    = 0xffaa00;
+const C_SUSPICION_HI = 0xff4400;
+const SUSPICION_BAR_W = 110;
+const SUSPICION_BAR_H = 8;
+
 // Layout constants
 const HUD_HEIGHT = 56;
 const PAD = 10;
@@ -54,6 +59,13 @@ export class UIScene extends Phaser.Scene {
   private alertTween?: Phaser.Tweens.Tween;
   private alertTimer?: Phaser.Time.TimerEvent;
 
+  // Suspicion HUD
+  private suspicionBarBg!: Phaser.GameObjects.Rectangle;
+  private suspicionBar!: Phaser.GameObjects.Rectangle;
+  private suspicionLabel!: Phaser.GameObjects.Text;
+  private suspicionTitle!: Phaser.GameObjects.Text;
+  private watchedText!: Phaser.GameObjects.Text;
+
   // Pulse tween for stress overlay
   private stressPulseTween?: Phaser.Tweens.Tween;
 
@@ -67,6 +79,7 @@ export class UIScene extends Phaser.Scene {
     this._createTexts();
     this._createStressOverlay();
     this._createAlertArea();
+    this._createSuspicionHUD();
     this._subscribeEvents();
     this._refreshAll();
   }
@@ -136,7 +149,7 @@ export class UIScene extends Phaser.Scene {
     });
 
     // Debug key hints
-    this.add.text(PAD, ROW2, '1:-prod  2:+prod  3:+stress  4:-stress  5:+money  6:+30min  7:+3h  M:missão  F:flags  O:objetivos', {
+    this.add.text(PAD, ROW2, '1:-prod  2:+prod  3:+stress  4:-stress  5:+money  6:+30min  7:+3h  M:missão  F:flags  O:obj  C:cone  Z:zonas  P:tp  K:+suspeita', {
       fontSize: '8px', color: '#334455',
     });
   }
@@ -205,6 +218,52 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
+  // ------------------------------------------------------ suspicion HUD
+
+  private _createSuspicionHUD(): void {
+    const sx = GAME_WIDTH - SUSPICION_BAR_W - PAD;
+    const sy = HUD_HEIGHT + 10;
+
+    this.suspicionTitle = this.add.text(sx, sy, 'Suspeita da Chefe:', {
+      fontSize: '9px', color: '#ffaa44',
+    }).setDepth(30);
+
+    this.suspicionBarBg = this.add.rectangle(sx, sy + 14, SUSPICION_BAR_W, SUSPICION_BAR_H, 0x332211)
+      .setOrigin(0, 0).setDepth(30);
+
+    this.suspicionBar = this.add.rectangle(sx, sy + 14, 0, SUSPICION_BAR_H, C_SUSPICION)
+      .setOrigin(0, 0).setDepth(31);
+
+    this.suspicionLabel = this.add.text(sx + SUSPICION_BAR_W + 4, sy + 14, '0%', {
+      fontSize: '9px', color: '#ffcc88',
+    }).setDepth(30);
+
+    this.watchedText = this.add.text(GAME_WIDTH / 2, HUD_HEIGHT + 8, 'Você está sendo observada.', {
+      fontSize: '11px', color: '#ffaa00', fontStyle: 'bold',
+    }).setOrigin(0.5, 0).setDepth(30).setAlpha(0);
+
+    this._setSuspicionVisible(false);
+  }
+
+  private _setSuspicionVisible(visible: boolean): void {
+    this.suspicionTitle.setVisible(visible);
+    this.suspicionBarBg.setVisible(visible);
+    this.suspicionBar.setVisible(visible);
+    this.suspicionLabel.setVisible(visible);
+  }
+
+  private _refreshSuspicion(value: number): void {
+    const pct = Math.round(value);
+    const visible = pct > 0;
+    this._setSuspicionVisible(visible);
+    if (!visible) return;
+
+    const ratio = value / 100;
+    this.suspicionBar.width = Math.max(0, SUSPICION_BAR_W * ratio);
+    this.suspicionBar.setFillStyle(value >= 75 ? C_SUSPICION_HI : C_SUSPICION);
+    this.suspicionLabel.setText(`${pct}%`);
+  }
+
   // --------------------------------------------------------- subscriptions
 
   private _subscribeEvents(): void {
@@ -229,6 +288,16 @@ export class UIScene extends Phaser.Scene {
     EventBus.on('mission:failed', () => {
       this._refreshMission();
       this._showAlert('Missão falhou.', '#ff4444', MISSION_ALERT_DURATION);
+    });
+
+    EventBus.on<number>('suspicion:changed', (value) => this._refreshSuspicion(value));
+
+    EventBus.on<boolean>('patrol:player_in_cone', (inCone) => {
+      this.tweens.add({
+        targets: this.watchedText,
+        alpha: inCone ? 1 : 0,
+        duration: 400,
+      });
     });
   }
 

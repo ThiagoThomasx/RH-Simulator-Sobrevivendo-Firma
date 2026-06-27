@@ -47,6 +47,10 @@ export class NPC {
     return this.container.y;
   }
 
+  setPosition(x: number, y: number): void {
+    this.container.setPosition(x, y);
+  }
+
   interact(): void {
     // placeholder — extended in future sprints
   }

@@ -1,0 +1,33 @@
+{
+  "id": "boss_rh_suspicion",
+  "characterId": "chefe_rh",
+  "startNodeId": "start",
+  "nodes": [
+    {
+      "id": "start",
+      "speakerId": "chefe_rh",
+      "speakerName": "Renata Braga (RH)",
+      "text": "Tiago, o hunting de DevSecOps já foi concluído?",
+      "choices": [
+        {
+          "id": "choice_alinhamento",
+          "text": "Estou validando alinhamentos estratégicos com os stakeholders.",
+          "effects": {
+            "stressDelta": 10,
+            "productivityDelta": -5,
+            "setFlags": ["chefe_rh_suspected_player"]
+          }
+        },
+        {
+          "id": "choice_voltando",
+          "text": "Estou voltando agora para minha mesa.",
+          "effects": {
+            "stressDelta": 10,
+            "productivityDelta": -5,
+            "setFlags": ["chefe_rh_suspected_player"]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -28,8 +28,24 @@ class DialogueSystemClass {
     this.onPointerDown = () => this._handlePointerDown();
   }
 
+  private boundGameScene: Phaser.Scene | null = null;
+  private boundPlayer: Player | null = null;
+
   get isOpen(): boolean {
     return this._isOpen;
+  }
+
+  bindContext(scene: Phaser.Scene, player: Player): void {
+    this.boundGameScene = scene;
+    this.boundPlayer = player;
+  }
+
+  startDialogueById(dialogueId: string): void {
+    if (!this.boundGameScene || !this.boundPlayer) {
+      console.warn('[DialogueSystem] bindContext() not called before startDialogueById()');
+      return;
+    }
+    this.openById(dialogueId, this.boundGameScene, this.boundPlayer);
   }
 
   registerDialogue(dialogue: DialogueFile): void {
