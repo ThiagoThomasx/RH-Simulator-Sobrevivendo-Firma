@@ -5,11 +5,15 @@ import { PlayerController } from '../systems/PlayerController';
 import { OfficeMap, MAP_WIDTH, MAP_HEIGHT } from '../maps/OfficeMap';
 import { statusSystem } from '../systems/StatusSystem';
 import { timeSystem } from '../systems/TimeSystem';
+import { npcSystem } from '../systems/NPCSystem';
+import { InteractionSystem } from '../systems/InteractionSystem';
+import { dialogueSystem } from '../systems/DialogueSystem';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
   private controller!: PlayerController;
   private officeMap!: OfficeMap;
+  private interactionSystem!: InteractionSystem;
   private debugKeys!: Record<string, Phaser.Input.Keyboard.Key>;
 
   constructor() {
@@ -29,6 +33,9 @@ export class GameScene extends Phaser.Scene {
 
     this.controller = new PlayerController(this);
 
+    npcSystem.createNPCs(this);
+    this.interactionSystem = new InteractionSystem(this);
+
     this.cameras.main.setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT);
     this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
 
@@ -38,6 +45,8 @@ export class GameScene extends Phaser.Scene {
   update(_time: number, delta: number): void {
     this.controller.update(this.player);
     timeSystem.update(delta);
+    this.interactionSystem.update(this.player);
+    dialogueSystem.update();
     this._handleDebugInput();
   }
 
